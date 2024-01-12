@@ -44,3 +44,59 @@ var polygon = L.polygon([
     [50.28918836253888, 18.678713603986086],
     [50.28883191636224, 18.67833227845212]
 ]).addTo(map);
+
+//3
+var requestCityInfoBtn = document.getElementById('requestCityInfoBtn');
+var cityInput = document.getElementById('cityInput');
+
+function capitalizeFirstChar(word) {
+    return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+requestCityInfoBtn.addEventListener('click', function () {
+    // Get the city name entered in the text box
+    var cityName = cityInput.value;
+    cityName = capitalizeFirstChar(cityName);
+    
+    // Check if the city name is not empty
+    if (cityName.trim() !== '') {
+        // Make a request to the OpenAQ API to get air quality data for the specified city
+        fetch('https://api.openaq.org/v1/latest?city=' + encodeURIComponent(cityName))
+            .then(response => response.json())
+            .then(data => {
+                // Check if the API response contains results
+                if (data.results.length > 0) {
+                    requestCityInfoBtn.disabled = true;
+                    // Get the latitude, longitude, and pollution level from the API response
+                    var lat = data.results[0].coordinates.latitude;
+                    var lng = data.results[0].coordinates.longitude;
+                    var pollutionLevel = data.results[0].measurements[0].value;
+                    
+                    // Call the function to add a marker at the specified coordinates with pollution level
+                    var latLng = L.latLng(lat, lng);
+                    addMarkerToMap(latLng);
+                    var string = '<p>';
+                    data.results[0].measurements.map(obj => {
+                        string += obj.parameter.toUpperCase() + ': ' + obj.value + ' ' + obj.unit + '</br>'
+                    });
+                    string += '</p>'
+                    var popup = L.popup()
+                        .setLatLng(latLng)
+                        .setContent(string)
+                        .openOn(map);
+
+                    // 3.iii
+                    map.setView(latLng, 12);
+                    requestCityInfoBtn.disabled = false;
+                } else {
+                    alert('No air quality data found for the specified city.');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching data from OpenAQ API:', error);
+                alert('Error fetching data from OpenAQ API. Please try again.');
+            });
+    } else {
+        alert('Please enter a city name.');
+    }
+});
